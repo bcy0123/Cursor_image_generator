@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabaseClient";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -27,7 +27,8 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ success: true, data });
-  } catch (error) {
+  } catch (err) {
+    console.error('Supabase test error:', err);
     return NextResponse.json({ error: "Failed to test Supabase connection" }, { status: 500 });
   }
 } 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function GenerationForm() {
   const [prompt, setPrompt] = useState('');
@@ -88,7 +89,13 @@ export default function GenerationForm() {
 
       {image && (
         <div className="mt-4">
-          <img src={image} alt={prompt} className="max-w-full h-auto rounded-lg shadow-lg" />
+          <Image
+            src={image}
+            alt={prompt}
+            width={512}
+            height={512}
+            className="max-w-full h-auto rounded-lg shadow-lg"
+          />
         </div>
       )}
     </div>

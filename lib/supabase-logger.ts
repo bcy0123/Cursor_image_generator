@@ -2,10 +2,15 @@ import { supabase } from '@/lib/supabaseClient';
 
 type LogAction = 'login' | 'generate_image' | 'image_generated' | 'credits_purchased';
 
+type LogMetadata = {
+  timestamp?: string;
+  [key: string]: unknown;
+};
+
 export async function logUserAction(
   clerkUserId: string,
   action: LogAction,
-  metadata: any
+  metadata: LogMetadata
 ) {
   try {
     await supabase.from('user_logs').insert({
@@ -16,7 +21,7 @@ export async function logUserAction(
         timestamp: new Date().toISOString()
       }
     });
-  } catch (error) {
-    console.error('Logging error:', error);
+  } catch (err) {
+    console.error('Logging error:', err);
   }
 } 

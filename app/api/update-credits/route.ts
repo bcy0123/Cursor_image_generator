@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prismaClient";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -16,7 +16,8 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({ message: "Credits updated", credits: user.creditBalance });
-  } catch (error) {
+  } catch (err) {
+    console.error('Update credits error:', err);
     return NextResponse.json({ error: "Failed to update credits" }, { status: 500 });
   }
 } 
