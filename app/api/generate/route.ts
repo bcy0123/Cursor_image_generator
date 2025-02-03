@@ -15,14 +15,19 @@ export async function POST(req: Request) {
     const { prompt } = await req.json();
     console.log('Processing prompt:', prompt);
     
-    const dbUser = await prisma.user.findUnique({
-      where: { clerkUserId: userId }
+    // First ensure user exists with upsert
+    const dbUser = await prisma.user.upsert({
+      where: { clerkUserId: userId },
+      update: {},
+      create: {
+        clerkUserId: userId,
+        creditBalance: 100
+      }
     });
 
-    console.log('Found user:', dbUser);
+    console.log('User found/created:', dbUser);
 
-    if (!dbUser || dbUser.creditBalance < 1) {
-      console.error('Credit check failed:', dbUser);
+    if (dbUser.creditBalance < 1) {
       return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
     }
 
@@ -30,23 +35,25 @@ export async function POST(req: Request) {
       // Enhanced prompt for better results
       const enhancedPrompt = `${prompt}, high quality, detailed, 4k, professional photography`;
       
+      console.log('Calling Stability API with prompt:', enhancedPrompt);
+      
       const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${process.env.STABILITY_API_KEY}`,
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           text_prompts: [
             { text: enhancedPrompt, weight: 1 },
             { text: 'blurry, bad quality, low resolution, ugly, distorted', weight: -1 }
           ],
-          cfg_scale: 8,
+          cfg_scale: 7,
           height: 1024,
           width: 1024,
-          steps: 40,
-          samples: 1,
-          style_preset: "photographic",
+          steps: 30,
+          samples: 1
         }),
       });
 
@@ -57,8 +64,10 @@ export async function POST(req: Request) {
       }
 
       const data = await response.json();
+      console.log('Stability API response received');
       
       if (!data.artifacts?.[0]?.base64) {
+        console.error('No image data in response:', data);
         throw new Error('No image data received from API');
       }
 
@@ -78,6 +87,8 @@ export async function POST(req: Request) {
         where: { id: dbUser.id },
         data: { creditBalance: dbUser.creditBalance - 1 }
       });
+
+      console.log('Generation completed successfully');
 
       return NextResponse.json({ 
         id: generation.id,
