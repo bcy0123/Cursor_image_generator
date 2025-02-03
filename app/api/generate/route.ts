@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prismaClient";
 import { NextResponse } from "next/server";
 
-export const maxDuration = 300; // Set max duration to 300 seconds
+export const maxDuration = 60; // Update to 60 seconds to comply with Vercel hobby plan limits
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
