@@ -3,13 +3,25 @@ import { prisma } from "@/lib/prismaClient";
 import GenerationForm from "./GenerationForm";
 
 async function getCredits() {
-  const { userId } = await auth();
-  if (!userId) return 0;
+  try {
+    const { userId } = await auth();
+    if (!userId) return 0;
 
-  const user = await prisma.user.findUnique({
-    where: { clerkUserId: userId }
-  });
-  return user?.creditBalance || 0;
+    // Try to find the user, if not found create them with 100 credits
+    const user = await prisma.user.upsert({
+      where: { clerkUserId: userId },
+      update: {},
+      create: {
+        clerkUserId: userId,
+        creditBalance: 100
+      }
+    });
+
+    return user.creditBalance;
+  } catch (error) {
+    console.error('Error getting credits:', error);
+    return 0;
+  }
 }
 
 export default async function DashboardPage() {
