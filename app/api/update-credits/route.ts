@@ -10,40 +10,26 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log('Attempting to update credits for user:', userId);
+    console.log('Updating credits for user:', userId);
 
-    // First check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { clerkUserId: userId }
+    // Force update credits to 100
+    const user = await prisma.user.upsert({
+      where: { clerkUserId: userId },
+      create: {
+        clerkUserId: userId,
+        creditBalance: 100
+      },
+      update: {
+        creditBalance: 100  // Force update to 100
+      }
     });
 
-    console.log('Existing user:', existingUser);
-
-    let user;
-    if (!existingUser) {
-      // Create new user
-      console.log('Creating new user');
-      user = await prisma.user.create({
-        data: {
-          clerkUserId: userId,
-          creditBalance: 100
-        }
-      });
-    } else {
-      // Update existing user
-      console.log('Updating existing user');
-      user = await prisma.user.update({
-        where: { clerkUserId: userId },
-        data: { creditBalance: 100 }
-      });
-    }
-
-    console.log('Operation successful:', user);
+    console.log('Credits updated:', user);
 
     return NextResponse.json({ 
-      message: "Credits updated", 
-      credits: user.creditBalance,
-      userId: user.id 
+      success: true,
+      message: "Credits updated successfully", 
+      credits: user.creditBalance 
     });
   } catch (err) {
     console.error('Update credits error:', err);
