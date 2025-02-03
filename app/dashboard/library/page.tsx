@@ -10,19 +10,33 @@ interface Generation {
 }
 
 async function getGenerations() {
-  const { userId } = await auth();
-  if (!userId) return [];
-
-  const user = await prisma.user.findUnique({
-    where: { clerkUserId: userId },
-    include: {
-      generations: {
-        orderBy: { createdAt: 'desc' }
-      }
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      console.error('No userId found');
+      return [];
     }
-  });
 
-  return user?.generations || [];
+    // First ensure user exists
+    const user = await prisma.user.upsert({
+      where: { clerkUserId: userId },
+      update: {},
+      create: {
+        clerkUserId: userId,
+        creditBalance: 100
+      },
+      include: {
+        generations: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    return user.generations || [];
+  } catch (error) {
+    console.error('Error fetching generations:', error);
+    return [];
+  }
 }
 
 export default async function LibraryPage() {

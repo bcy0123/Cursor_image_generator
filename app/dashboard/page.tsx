@@ -7,7 +7,7 @@ async function getCredits() {
     const { userId } = await auth();
     if (!userId) return 0;
 
-    // Try to find the user, if not found create them with 100 credits
+    // Create or update user with 100 credits
     const user = await prisma.user.upsert({
       where: { clerkUserId: userId },
       update: {},

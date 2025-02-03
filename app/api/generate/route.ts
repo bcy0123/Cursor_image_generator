@@ -8,16 +8,21 @@ export async function POST(req: Request) {
     const user = await currentUser();
     
     if (!userId || !user) {
+      console.error('Auth failed:', { userId, user });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { prompt } = await req.json();
+    console.log('Processing prompt:', prompt);
     
     const dbUser = await prisma.user.findUnique({
       where: { clerkUserId: userId }
     });
 
+    console.log('Found user:', dbUser);
+
     if (!dbUser || dbUser.creditBalance < 1) {
+      console.error('Credit check failed:', dbUser);
       return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
     }
 
