@@ -25,7 +25,7 @@ model Generation {
   user      User     @relation(fields: [userId], references: [id])
   userId    String
   prompt    String
-  imageUrl  String
+  imageUrl  String   @db.Text  // Change to Text type for large base64 strings
   createdAt DateTime @default(now())
 }
 
