@@ -93,15 +93,17 @@ export async function POST(req: Request) {
         imageUrl: generation.imageUrl
       });
 
-    } catch (apiError) {
-      console.error('API call error:', apiError);
+    } catch (error: unknown) {
+      console.error('API call error:', error);
+      const apiError = error as Error;
+      
       if (apiError.name === 'AbortError') {
         return NextResponse.json({ 
           error: 'Image generation timed out. Please try again.'
         }, { status: 504 });
       }
       return NextResponse.json({ 
-        error: apiError instanceof Error ? apiError.message : 'Failed to generate image'
+        error: apiError.message || 'Failed to generate image'
       }, { status: 500 });
     } finally {
       clearTimeout(timeoutId);
