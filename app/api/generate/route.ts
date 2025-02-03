@@ -10,6 +10,7 @@ export async function POST(req: Request) {
     }
 
     const { prompt } = await req.json();
+    console.log('Processing prompt:', prompt);
     
     // Get user and ensure they exist
     const dbUser = await prisma.user.findUnique({
@@ -21,55 +22,70 @@ export async function POST(req: Request) {
     }
 
     // Call Stability API
-    const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.STABILITY_API_KEY}`,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        text_prompts: [{ text: prompt, weight: 1 }],
-        cfg_scale: 7,
-        height: 1024,
-        width: 1024,
-        steps: 30,
-        samples: 1
-      }),
-    });
+    try {
+      const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.STABILITY_API_KEY}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          text_prompts: [{ text: prompt, weight: 1 }],
+          cfg_scale: 7,
+          height: 1024,
+          width: 1024,
+          steps: 30,
+          samples: 1
+        }),
+      });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Stability API error:', error);
-      return NextResponse.json({ error: `API Error: ${error}` }, { status: 500 });
-    }
-
-    const data = await response.json();
-    
-    if (!data.artifacts?.[0]?.base64) {
-      return NextResponse.json({ error: 'No image generated' }, { status: 500 });
-    }
-
-    const imageUrl = `data:image/png;base64,${data.artifacts[0].base64}`;
-
-    // Save the generation
-    const generation = await prisma.generation.create({
-      data: {
-        userId: dbUser.id,
-        prompt,
-        imageUrl
+      let errorMessage;
+      if (!response.ok) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || 'API Error';
+        } catch {
+          const errorText = await response.text();
+          errorMessage = errorText || response.statusText;
+        }
+        console.error('Stability API error:', errorMessage);
+        return NextResponse.json({ error: errorMessage }, { status: response.status });
       }
-    });
 
-    // Deduct credit
-    await prisma.user.update({
-      where: { id: dbUser.id },
-      data: { creditBalance: dbUser.creditBalance - 1 }
-    });
+      const data = await response.json();
+      
+      if (!data.artifacts?.[0]?.base64) {
+        return NextResponse.json({ error: 'No image generated' }, { status: 500 });
+      }
 
-    return NextResponse.json({ 
-      imageUrl: generation.imageUrl
-    });
+      const imageUrl = `data:image/png;base64,${data.artifacts[0].base64}`;
+
+      // Save the generation
+      const generation = await prisma.generation.create({
+        data: {
+          userId: dbUser.id,
+          prompt,
+          imageUrl
+        }
+      });
+
+      // Deduct credit
+      await prisma.user.update({
+        where: { id: dbUser.id },
+        data: { creditBalance: dbUser.creditBalance - 1 }
+      });
+
+      return NextResponse.json({ 
+        imageUrl: generation.imageUrl
+      });
+
+    } catch (apiError) {
+      console.error('API call error:', apiError);
+      return NextResponse.json({ 
+        error: apiError instanceof Error ? apiError.message : 'Failed to connect to image generation service'
+      }, { status: 500 });
+    }
 
   } catch (error) {
     console.error('Generation error:', error);
