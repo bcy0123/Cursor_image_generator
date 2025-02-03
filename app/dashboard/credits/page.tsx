@@ -10,24 +10,34 @@ interface Transaction {
 }
 
 async function getCredits() {
-  const { userId } = await auth();
-  if (!userId) return { credits: 0, transactions: [] };
+  try {
+    const { userId } = await auth();
+    if (!userId) return { credits: 0, transactions: [] };
 
-  // First get the user's credits
-  const user = await prisma.user.findUnique({
-    where: { clerkUserId: userId }
-  });
+    // First ensure user exists with upsert
+    const user = await prisma.user.upsert({
+      where: { clerkUserId: userId },
+      update: {},
+      create: {
+        clerkUserId: userId,
+        creditBalance: 100
+      }
+    });
 
-  // Then get transactions separately
-  const transactions = await prisma.transaction.findMany({
-    where: { userId: user?.id },
-    orderBy: { createdAt: 'desc' }
-  });
-  
-  return { 
-    credits: user?.creditBalance || 0,
-    transactions: transactions || []
-  };
+    // Then get transactions
+    const transactions = await prisma.transaction.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    return { 
+      credits: user.creditBalance,
+      transactions: transactions
+    };
+  } catch (error) {
+    console.error('Error getting credits:', error);
+    return { credits: 0, transactions: [] };
+  }
 }
 
 export default async function CreditsPage() {
