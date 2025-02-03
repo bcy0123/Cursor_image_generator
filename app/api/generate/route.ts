@@ -45,9 +45,9 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           text_prompts: [{ text: prompt, weight: 1 }],
           cfg_scale: 7,
-          height: 512, // Reduced size for faster generation
-          width: 512,  // Reduced size for faster generation
-          steps: 25,   // Reduced steps for faster generation
+          height: 1024, // Updated to supported dimension
+          width: 1024,  // Updated to supported dimension
+          steps: 25,    // Keeping reduced steps for faster generation
           samples: 1
         }),
         signal: controller.signal
